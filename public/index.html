@@ -55,6 +55,7 @@
       <header class="topo">
         <h1 id="titulo-view">Visão geral</h1>
         <div class="topo-acoes">
+          <button class="botao-privado" id="sidebar-toggle" title="Recolher menu lateral" aria-label="Recolher menu lateral"><i data-lucide="panel-left-close"></i></button>
           <button class="botao-privado" id="botao-privado" title="Borrar dados sensíveis (modo gravação)">
             <span id="icone-privado"><i data-lucide="eye"></i></span>
           </button>
@@ -67,6 +68,10 @@
 
       <!-- ── Aba: Visão geral ── -->
       <section class="view" id="view-visao-geral">
+        <div class="tenant-hero">
+          <div><span class="tenant-kicker"><i data-lucide="sparkles"></i>PAINEL DA EMPRESA</span><h2>Visão da sua operação</h2><p>Acompanhe conversas, desempenho e a saúde da sua conexão em tempo real.</p></div>
+          <button class="tenant-hero-action" data-view="conversas"><i data-lucide="message-square-plus"></i>Abrir conversas</button>
+        </div>
         <!-- Card do QR: aparece enquanto o status for "aguardando_qr".
              Fica ANTES das métricas de propósito: parear é a primeira coisa
              que a pessoa precisa fazer — nada de caçar o QR no fim da página. -->
@@ -173,6 +178,11 @@
             <div class="card-cabecalho"><i data-lucide="timer"></i><h2>No ar</h2></div>
             <p class="metrica" id="metrica-uptime">—</p>
             <p class="card-suporte">tempo do servidor ligado</p>
+          </div>
+          <div class="card metric-destaque">
+            <div class="card-cabecalho"><i data-lucide="badge-check"></i><h2>Taxa de leitura</h2></div>
+            <p class="metrica" id="metrica-taxa">0%</p>
+            <p class="card-suporte">mensagens recebidas já visualizadas</p>
           </div>
         </div>
 

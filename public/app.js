@@ -30,6 +30,21 @@ const $ = (id) => document.getElementById(id)
 
 const socket = io()
 
+// Preferência visual local: cada usuário pode recolher o menu sem afetar ninguém.
+const sidebarToggle = $('sidebar-toggle')
+function aplicarMenuRecolhido(recolhido) {
+  document.body.classList.toggle('tenant-menu-recolhido', recolhido)
+  sidebarToggle?.setAttribute('title', recolhido ? 'Expandir menu lateral' : 'Recolher menu lateral')
+  if (sidebarToggle) sidebarToggle.innerHTML = `<i data-lucide="${recolhido ? 'panel-left-open' : 'panel-left-close'}"></i>`
+  lucide.createIcons()
+}
+aplicarMenuRecolhido(localStorage.getItem('tenant-menu-recolhido') === '1')
+sidebarToggle?.addEventListener('click', () => {
+  const recolhido = !document.body.classList.contains('tenant-menu-recolhido')
+  localStorage.setItem('tenant-menu-recolhido', recolhido ? '1' : '0')
+  aplicarMenuRecolhido(recolhido)
+})
+
 // ── Segurança básica: nunca injetar texto de mensagem direto no HTML ──────
 // (uma mensagem maliciosa poderia conter <script>; assim ela vira texto puro)
 function escaparHtml(texto) {
@@ -93,6 +108,10 @@ document.querySelectorAll('.menu-item').forEach((botao) => {
     $(`view-${view}`).classList.remove('oculto')
     $('titulo-view').textContent = TITULOS[view]
   })
+})
+
+document.querySelectorAll('.tenant-hero-action[data-view]').forEach((botao) => {
+  botao.addEventListener('click', () => document.querySelector(`.menu-item[data-view="${botao.dataset.view}"]`)?.click())
 })
 
 // ── Status da conexão (pill no topo + bolinha na sidebar + cards) ─────────
@@ -241,6 +260,9 @@ function atualizarMetricas() {
   $('metrica-conversas').textContent = conversas.size
   $('metrica-grupos').textContent = grupos
   $('metrica-midias').textContent = midias
+  const mensagensRecebidas = [...conversas.values()].flatMap((conversa) => conversa.mensagens).filter((m) => !m.fromMe)
+  const lidas = mensagensRecebidas.filter((m) => m.lida).length
+  $('metrica-taxa').textContent = mensagensRecebidas.length ? `${Math.round((lidas / mensagensRecebidas.length) * 100)}%` : '0%'
 }
 
 // "No ar": o servidor manda quando iniciou; o painel atualiza a cada minuto
