@@ -21,18 +21,37 @@ O resultado deve ser o IP da VPS. A emissão do SSL só funciona depois disso. S
 
 ## 2. Instalar Docker
 
-No Ubuntu, execute:
+Execute **um comando por vez** no terminal da VPS. O comando `sudo` pode pedir a senha do seu usuário; ao digitá-la nada aparecerá na tela, o que é normal.
 
 ```bash
 sudo apt update
+```
+
+```bash
 sudo apt install -y ca-certificates curl git
+```
+
+```bash
 curl -fsSL https://get.docker.com -o get-docker.sh
+```
+
+```bash
 sudo sh get-docker.sh
+```
+
+```bash
 sudo usermod -aG docker $USER
+```
+
+### Reconectar à VPS (etapa obrigatória)
+
+Agora rode o comando abaixo. **Ele fechará/desconectará o terminal de propósito**: isso é necessário para que a permissão de usar Docker sem `sudo` passe a valer.
+
+```bash
 exit
 ```
 
-Entre por SSH novamente e confira:
+Abra uma nova conexão SSH com a VPS e confira a instalação:
 
 ```bash
 docker --version
