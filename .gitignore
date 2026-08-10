@@ -9,6 +9,8 @@ node_modules/
 *.sqlite-wal
 *.sqlite-shm
 *.db
+mysql-*.sql
+zapo-data-*.tar.gz
 
 # Segredos e variáveis de ambiente
 .env
