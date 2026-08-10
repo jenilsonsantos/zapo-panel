@@ -44,6 +44,20 @@ export async function login(req, res) {
   res.cookie(COOKIE, token, options()).json({ ok: true, user: { name: user.name, email: user.email, role: user.role } })
 }
 
+// Login isolado do backoffice. Uma conta de empresa nunca ganha acesso ao /admin.
+export async function adminLogin(req, res) {
+  const email = String(req.body?.email || '').trim().toLowerCase()
+  const password = String(req.body?.password || '')
+  const [rows] = await db.query('SELECT id, name, email, password_hash, role, active FROM users WHERE email = ? LIMIT 1', [email])
+  const user = rows[0]
+  if (!user || !user.active || user.role !== 'super_admin' || !(await bcrypt.compare(password, user.password_hash))) {
+    return res.status(401).json({ error: 'Credenciais de administrador inválidas.' })
+  }
+  const token = crypto.randomBytes(48).toString('base64url')
+  await db.query('INSERT INTO app_sessions (token_hash, user_id, expires_at) VALUES (?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 DAY))', [hashToken(token), user.id])
+  res.cookie(COOKIE, token, options()).json({ ok: true, user: { name: user.name, email: user.email, role: user.role } })
+}
+
 // Cadastro público: cada pessoa cria o próprio tenant e torna-se sua administradora.
 export async function register(req, res, next) {
   const name = String(req.body?.name || '').trim().slice(0, 120)

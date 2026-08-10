@@ -14,7 +14,7 @@ import sharp from 'sharp'
 import { iniciarWhatsapp } from './whatsapp.js'
 import { obterConfiguracao, salvarConfiguracao } from './configuracao.js'
 import { db, id, initializeDatabase, bootstrapSuperAdmin } from './database.js'
-import { loadUser, requireUser, requireSuperAdmin, login, logout, register, socketUser } from './auth.js'
+import { loadUser, requireUser, requireSuperAdmin, login, adminLogin, logout, register, socketUser } from './auth.js'
 
 // "Silenciar para sempre": o cliente oficial usa um timestamp no ano 9999
 const MUTE_PARA_SEMPRE = 253402300799000
@@ -51,6 +51,7 @@ const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 8, standardHea
 const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 4, standardHeaders: 'draft-8', legacyHeaders: false })
 app.post('/api/auth/login', loginLimiter, login)
 app.post('/api/auth/register', registerLimiter, register)
+app.post('/api/admin/login', loginLimiter, adminLogin)
 app.post('/api/auth/logout', logout)
 app.get('/api/auth/me', (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Não autenticado.' })
@@ -62,6 +63,19 @@ app.get('/api/admin/tenants', requireUser, requireSuperAdmin, async (req, res, n
     const [rows] = await db.query(`SELECT t.id, t.name, t.slug, t.status, t.created_at, COUNT(tu.user_id) AS users
       FROM tenants t LEFT JOIN tenant_users tu ON tu.tenant_id = t.id GROUP BY t.id ORDER BY t.created_at DESC`)
     res.json({ tenants: rows })
+  } catch (error) { next(error) }
+})
+
+app.get('/api/admin/overview', requireUser, requireSuperAdmin, async (req, res, next) => {
+  try {
+    const [[counts]] = await db.query(`SELECT
+      (SELECT COUNT(*) FROM tenants) AS tenants,
+      (SELECT COUNT(*) FROM tenants WHERE status = 'active') AS activeTenants,
+      (SELECT COUNT(*) FROM users WHERE active = 1) AS activeUsers,
+      (SELECT COUNT(*) FROM whatsapp_connections) AS connections`)
+    const [recent] = await db.query(`SELECT a.action, a.entity_type, a.created_at, u.email AS actor
+      FROM audit_logs a LEFT JOIN users u ON u.id = a.actor_user_id ORDER BY a.created_at DESC LIMIT 12`)
+    res.json({ counts, recent })
   } catch (error) { next(error) }
 })
 
@@ -83,6 +97,7 @@ app.post('/api/admin/tenants', requireUser, requireSuperAdmin, async (req, res, 
     await connection.query('INSERT INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)', [userId, adminName, email, await bcrypt.default.hash(password, 12), 'tenant_admin'])
     await connection.query('INSERT INTO tenant_users (tenant_id, user_id, role) VALUES (?, ?, ?)', [tenantId, userId, 'owner'])
     await connection.query('INSERT INTO whatsapp_connections (id, tenant_id, name, session_key) VALUES (?, ?, ?, ?)', [id(), tenantId, 'Conexão principal', `tenant-${tenantId}`])
+    await connection.query('INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id, details) VALUES (?, ?, ?, ?, ?)', [req.user.id, 'tenant_created', 'tenant', tenantId, JSON.stringify({ name, slug })])
     await connection.commit()
     res.status(201).json({ ok: true, tenant: { id: tenantId, name, slug } })
   } catch (error) {
@@ -96,6 +111,7 @@ app.patch('/api/admin/tenants/:id/status', requireUser, requireSuperAdmin, async
   try {
     const status = req.body?.status === 'suspended' ? 'suspended' : 'active'
     await db.query('UPDATE tenants SET status = ? WHERE id = ?', [status, req.params.id])
+    await db.query('INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id, details) VALUES (?, ?, ?, ?, ?)', [req.user.id, `tenant_${status}`, 'tenant', req.params.id, JSON.stringify({ status })])
     res.json({ ok: true })
   } catch (error) { next(error) }
 })
@@ -103,7 +119,16 @@ app.patch('/api/admin/tenants/:id/status', requireUser, requireSuperAdmin, async
 app.get('/', (req, res) => res.redirect(req.user ? '/index.html' : '/login'))
 app.get('/login', (req, res) => res.redirect(req.user ? '/' : '/login.html'))
 app.get('/cadastro', (req, res) => res.redirect(req.user ? '/' : '/cadastro.html'))
-app.get('/admin', requireUser, requireSuperAdmin, (req, res) => res.sendFile(join(process.cwd(), 'public', 'admin.html')))
+app.get('/admin/login', (req, res) => {
+  if (req.user?.role === 'super_admin') return res.redirect('/admin')
+  if (req.user) return res.redirect('/')
+  res.sendFile(join(process.cwd(), 'public', 'admin-login.html'))
+})
+app.get('/admin', (req, res) => {
+  if (req.user?.role !== 'super_admin') return res.redirect('/admin/login')
+  res.sendFile(join(process.cwd(), 'public', 'admin.html'))
+})
+app.get('/admin.html', (req, res) => res.redirect('/admin'))
 const servidorHttp = http.createServer(app)
 // maxHttpBufferSize maior para o envio de arquivos pelo painel (padrão é só 1 MB)
 const io = new Server(servidorHttp, { maxHttpBufferSize: 30 * 1024 * 1024 })
