@@ -79,6 +79,24 @@ app.get('/api/admin/overview', requireUser, requireSuperAdmin, async (req, res, 
   } catch (error) { next(error) }
 })
 
+app.get('/api/admin/users', requireUser, requireSuperAdmin, async (req, res, next) => {
+  try {
+    const [users] = await db.query(`SELECT u.id, u.name, u.email, u.role, u.active, u.created_at,
+      GROUP_CONCAT(t.name ORDER BY t.name SEPARATOR ', ') AS tenants
+      FROM users u LEFT JOIN tenant_users tu ON tu.user_id = u.id LEFT JOIN tenants t ON t.id = tu.tenant_id
+      GROUP BY u.id ORDER BY u.created_at DESC LIMIT 200`)
+    res.json({ users })
+  } catch (error) { next(error) }
+})
+
+app.get('/api/admin/connections', requireUser, requireSuperAdmin, async (req, res, next) => {
+  try {
+    const [connections] = await db.query(`SELECT c.id, c.name, c.status, c.session_key, c.created_at, t.name AS tenant
+      FROM whatsapp_connections c JOIN tenants t ON t.id = c.tenant_id ORDER BY c.created_at DESC LIMIT 200`)
+    res.json({ connections })
+  } catch (error) { next(error) }
+})
+
 app.post('/api/admin/tenants', requireUser, requireSuperAdmin, async (req, res, next) => {
   const name = String(req.body?.name || '').trim().slice(0, 120)
   const slug = String(req.body?.slug || '').trim().toLowerCase()
