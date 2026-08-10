@@ -39,6 +39,9 @@ export async function login(req, res) {
   if (!user || !user.active || !(await bcrypt.compare(password, user.password_hash))) {
     return res.status(401).json({ error: 'E-mail ou senha inválidos.' })
   }
+  if (user.role === 'super_admin') {
+    return res.status(403).json({ error: 'Esta é uma conta de administrador. Use /admin/login.' })
+  }
   const token = crypto.randomBytes(48).toString('base64url')
   await db.query('INSERT INTO app_sessions (token_hash, user_id, expires_at) VALUES (?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 DAY))', [hashToken(token), user.id])
   res.cookie(COOKIE, token, options()).json({ ok: true, user: { name: user.name, email: user.email, role: user.role } })
@@ -60,6 +63,7 @@ export async function adminLogin(req, res) {
 
 // Cadastro público: cada pessoa cria o próprio tenant e torna-se sua administradora.
 export async function register(req, res, next) {
+  if (req.user) return res.status(403).json({ error: 'Encerre a sessão atual antes de criar outra conta.' })
   const name = String(req.body?.name || '').trim().slice(0, 120)
   const company = String(req.body?.company || '').trim().slice(0, 120)
   const requestedSlug = String(req.body?.slug || '').trim().toLowerCase()
@@ -98,6 +102,7 @@ export async function socketUser(socket, next) {
     const raw = cookieValue(socket.request.headers.cookie, COOKIE)
     const user = await findSession(raw)
     if (!user) return next(new Error('Não autenticado'))
+    if (user.role === 'super_admin') return next(new Error('Administrador não acessa o painel operacional'))
     socket.data.user = user
     next()
   } catch { next(new Error('Não autenticado')) }

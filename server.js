@@ -134,9 +134,25 @@ app.patch('/api/admin/tenants/:id/status', requireUser, requireSuperAdmin, async
   } catch (error) { next(error) }
 })
 
-app.get('/', (req, res) => res.redirect(req.user ? '/index.html' : '/login'))
-app.get('/login', (req, res) => res.redirect(req.user ? '/' : '/login.html'))
-app.get('/cadastro', (req, res) => res.redirect(req.user ? '/' : '/cadastro.html'))
+app.get('/', (req, res) => {
+  if (!req.user) return res.redirect('/login')
+  return res.redirect(req.user.role === 'super_admin' ? '/admin' : '/index.html')
+})
+app.get('/index.html', (req, res) => {
+  if (!req.user) return res.redirect('/login')
+  if (req.user.role === 'super_admin') return res.redirect('/admin')
+  res.sendFile(join(process.cwd(), 'public', 'index.html'))
+})
+app.get('/login', (req, res) => {
+  if (req.user) return res.redirect(req.user.role === 'super_admin' ? '/admin' : '/')
+  res.sendFile(join(process.cwd(), 'public', 'login.html'))
+})
+app.get('/login.html', (req, res) => res.redirect('/login'))
+app.get('/cadastro', (req, res) => {
+  if (req.user) return res.redirect(req.user.role === 'super_admin' ? '/admin' : '/')
+  res.sendFile(join(process.cwd(), 'public', 'cadastro.html'))
+})
+app.get('/cadastro.html', (req, res) => res.redirect('/cadastro'))
 app.get('/admin/login', (req, res) => {
   if (req.user?.role === 'super_admin') return res.redirect('/admin')
   if (req.user) return res.redirect('/')
