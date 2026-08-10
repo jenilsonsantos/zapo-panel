@@ -14,7 +14,7 @@ import sharp from 'sharp'
 import { iniciarWhatsapp } from './whatsapp.js'
 import { obterConfiguracao, salvarConfiguracao } from './configuracao.js'
 import { db, id, initializeDatabase, bootstrapSuperAdmin } from './database.js'
-import { loadUser, requireUser, requireSuperAdmin, login, logout, socketUser } from './auth.js'
+import { loadUser, requireUser, requireSuperAdmin, login, logout, register, socketUser } from './auth.js'
 
 // "Silenciar para sempre": o cliente oficial usa um timestamp no ano 9999
 const MUTE_PARA_SEMPRE = 253402300799000
@@ -48,7 +48,9 @@ app.use(express.json({ limit: '32kb' }))
 app.use(loadUser)
 
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 8, standardHeaders: 'draft-8', legacyHeaders: false })
+const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 4, standardHeaders: 'draft-8', legacyHeaders: false })
 app.post('/api/auth/login', loginLimiter, login)
+app.post('/api/auth/register', registerLimiter, register)
 app.post('/api/auth/logout', logout)
 app.get('/api/auth/me', (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Não autenticado.' })
@@ -98,7 +100,9 @@ app.patch('/api/admin/tenants/:id/status', requireUser, requireSuperAdmin, async
   } catch (error) { next(error) }
 })
 
-app.get('/', (req, res) => res.redirect(req.user ? '/index.html' : '/login.html'))
+app.get('/', (req, res) => res.redirect(req.user ? '/index.html' : '/login'))
+app.get('/login', (req, res) => res.redirect(req.user ? '/' : '/login.html'))
+app.get('/cadastro', (req, res) => res.redirect(req.user ? '/' : '/cadastro.html'))
 app.get('/admin', requireUser, requireSuperAdmin, (req, res) => res.sendFile(join(process.cwd(), 'public', 'admin.html')))
 const servidorHttp = http.createServer(app)
 // maxHttpBufferSize maior para o envio de arquivos pelo painel (padrão é só 1 MB)
