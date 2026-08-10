@@ -47,6 +47,8 @@ services:
     restart: unless-stopped
     depends_on:
       - zapo-panel
+    environment:
+      DOMAIN: ${DOMAIN}
     ports:
       - "80:80"
       - "443:443"

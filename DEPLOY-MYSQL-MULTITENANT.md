@@ -23,44 +23,27 @@ exit
 
 O `exit` desconecta de propósito. Entre novamente por SSH e valide com `docker --version`.
 
-## Publicar o sistema
+## Publicar o sistema automaticamente (recomendado)
 
 ```bash
 sudo mkdir -p /opt/ublochat
 sudo chown "$USER":"$USER" /opt/ublochat
 git clone https://github.com/jenilsonsantos/zapo-panel.git /opt/ublochat
 cd /opt/ublochat
-cp .env.example .env
+bash scripts/install-production.sh ublochat.com.br admin@ublochat.com.br
 ```
 
-Gere três senhas diferentes e fortes; copie cada resultado para o campo correspondente no `.env`:
+O script gera automaticamente senhas fortes e diferentes para MySQL, MySQL root e administrador do painel; cria o `.env` com permissão `600`; sobe todos os contêineres; e mostra as credenciais no terminal **uma única vez**. Copie-as para um gerenciador de senhas antes de fechar o terminal.
+
+Depois, acompanhe a primeira inicialização e a emissão do certificado SSL:
 
 ```bash
-openssl rand -base64 36
-```
-
-Edite o arquivo com `nano .env`:
-
-```ini
-MYSQL_DATABASE=zapo
-MYSQL_USER=zapo_app
-MYSQL_PASSWORD=COLE_A_PRIMEIRA_SENHA
-MYSQL_ROOT_PASSWORD=COLE_A_SEGUNDA_SENHA
-ADMIN_EMAIL=admin@ublochat.com.br
-ADMIN_PASSWORD=COLE_A_TERCEIRA_SENHA_COM_14_OU_MAIS_CARACTERES
-NODE_ENV=production
-```
-
-Salve no Nano com `Ctrl+O`, `Enter` e saia com `Ctrl+X`. Nunca envie esse arquivo para GitHub, WhatsApp ou e-mail.
-
-Suba os serviços:
-
-```bash
-docker compose -f docker-compose.production.yml up -d --build
 docker compose -f docker-compose.production.yml logs -f
 ```
 
-Espere a mensagem de certificado obtido pelo Caddy e abra `https://ublochat.com.br`. Entre usando `ADMIN_EMAIL` e `ADMIN_PASSWORD`. O banco cria automaticamente as tabelas e o administrador no primeiro início.
+Espere a mensagem de certificado obtido pelo Caddy e abra `https://ublochat.com.br`. O banco cria automaticamente as tabelas e o administrador no primeiro início.
+
+> O instalador não sobrescreve um `.env` existente. Isso evita perder ou substituir acidentalmente as credenciais de uma instalação em uso.
 
 ## Painel administrativo
 
