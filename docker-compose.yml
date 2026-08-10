@@ -1,0 +1,26 @@
+# Sobe o zapo-panel com um comando só:
+#
+#   docker compose up -d
+#
+# Depois abra http://localhost:3333 e escaneie o QR.
+# Para parar: docker compose down (a sessão do WhatsApp fica guardada).
+
+services:
+  zapo-panel:
+    build: .
+    container_name: zapo-panel
+    ports:
+      - "3333:3333"
+    volumes:
+      # O projeto inteiro entra no contêiner: mexeu num arquivo aqui fora,
+      # é só reiniciar o contêiner (docker compose restart) para aplicar.
+      - ./:/app
+      # ...mas o node_modules usado é o de DENTRO da imagem (compilado p/ Linux)
+      - /app/node_modules
+      # A sessão do WhatsApp mora num volume do Docker: mais confiável para o
+      # SQLite do que a pasta compartilhada do Windows, e sobrevive a rebuilds.
+      - dados-sessao:/app/.auth
+    restart: unless-stopped
+
+volumes:
+  dados-sessao:

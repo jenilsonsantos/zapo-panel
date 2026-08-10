@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zapo Painel</title>
+  <link rel="icon" type="image/png" href="favicon-zapo.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+
+    <!-- ══════════════ SIDEBAR (menu lateral) ══════════════ -->
+    <aside class="sidebar">
+      <div class="marca">
+        <a href="https://zapo.to" target="_blank" rel="noopener" aria-label="zapo">
+          <img class="marca-logo" src="assets/zapo-header.png" alt="zapo">
+        </a>
+        <small>Painel &middot; WhatsApp via zapo-js</small>
+      </div>
+
+      <nav class="menu">
+        <button class="menu-item ativo" data-view="visao-geral">
+          <i data-lucide="layout-dashboard"></i><span>Visão geral</span>
+        </button>
+        <button class="menu-item" data-view="conversas">
+          <i data-lucide="message-square"></i><span>Conversas</span>
+        </button>
+        <button class="menu-item" data-view="comandos">
+          <i data-lucide="terminal"></i><span>Comandos do bot</span>
+        </button>
+        <button class="menu-item" data-view="configuracoes">
+          <i data-lucide="settings"></i><span>Configurações</span>
+        </button>
+        <button class="menu-item" data-view="docs">
+          <i data-lucide="sparkles"></i><span>Docs &amp; IA</span>
+        </button>
+      </nav>
+
+      <div class="zpro-promo">
+        <a href="https://zpro.zdg.com.br/" target="_blank" rel="noopener" aria-label="Z-PRO">
+          <img src="assets/zpro-logo-dark.png" alt="Z-PRO">
+        </a>
+        <p class="zpro-promo-texto">Plataforma completa de multiatendimento.</p>
+        <a class="zpro-botao" href="https://zpro.zdg.com.br/" target="_blank" rel="noopener">Conheça o Z-PRO &rarr;</a>
+      </div>
+      <div class="sidebar-rodape">
+        <span class="ponto-status" id="ponto-status" data-status="iniciando"></span>
+        <span id="status-sidebar">Iniciando</span>
+      </div>
+    </aside>
+
+    <!-- ══════════════ CONTEÚDO PRINCIPAL ══════════════ -->
+    <main class="conteudo">
+      <header class="topo">
+        <h1 id="titulo-view">Visão geral</h1>
+        <div class="topo-acoes">
+          <button class="botao-privado" id="botao-privado" title="Borrar dados sensíveis (modo gravação)">
+            <span id="icone-privado"><i data-lucide="eye"></i></span>
+          </button>
+          <span class="pill" id="pill-status" data-status="iniciando">
+            <span id="pill-icone"><i data-lucide="loader"></i></span>
+            <span id="pill-texto">Iniciando</span>
+          </span>
+        </div>
+      </header>
+
+      <!-- ── Aba: Visão geral ── -->
+      <section class="view" id="view-visao-geral">
+        <!-- Card do QR: aparece enquanto o status for "aguardando_qr".
+             Fica ANTES das métricas de propósito: parear é a primeira coisa
+             que a pessoa precisa fazer — nada de caçar o QR no fim da página. -->
+        <div class="card card-qr" id="card-qr">
+          <div class="card-cabecalho"><i data-lucide="qr-code"></i><h2>Parear aparelho</h2></div>
+          <div class="qr-linha">
+            <div class="qr-area">
+              <img id="imagem-qr" alt="QR code de pareamento" class="oculto">
+              <div class="qr-aguardando" id="qr-aguardando">
+                <i data-lucide="loader-circle"></i>
+                <span>Gerando QR code...</span>
+              </div>
+            </div>
+            <ol class="qr-passos">
+              <li>Abra o WhatsApp no celular (use um chip de teste)</li>
+              <li>Toque em <strong>Configurações</strong> e depois em <strong>Aparelhos conectados</strong></li>
+              <li>Toque em <strong>Conectar aparelho</strong> e aponte a câmera para o QR ao lado</li>
+            </ol>
+          </div>
+
+          <!-- Alternativa sem câmera: código de 8 dígitos -->
+          <div class="pareamento-codigo">
+            <p class="card-suporte">Sem câmera? Conecte com um <strong>código de 8 dígitos</strong>: digite o número do chip de teste e gere o código.</p>
+            <form class="linha-adicionar" id="form-codigo">
+              <input id="campo-numero-codigo" type="text" inputmode="numeric" placeholder="Número com DDI (ex: 5511999999999)" autocomplete="off">
+              <button type="submit"><i data-lucide="key-round"></i><span>Gerar código</span></button>
+            </form>
+            <div class="codigo-gerado oculto" id="codigo-gerado">
+              <span class="codigo" id="codigo-texto"></span>
+              <p class="card-suporte">No celular: <strong>Aparelhos conectados</strong> &rsaquo; <strong>Conectar aparelho</strong> &rsaquo; <strong>Conectar com número de telefone</strong> e digite o código acima.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card de sucesso: aparece quando conectar (no lugar do QR, no topo).
+             Os dados da conta chegam no evento 'conta' do Socket.IO. -->
+        <div class="card card-conectado oculto" id="card-conectado">
+          <i data-lucide="circle-check"></i>
+          <div class="conta-info">
+            <h2>Aparelho conectado</h2>
+            <div class="conta-linha">
+              <img id="conta-foto" class="conta-foto oculto" alt="Foto de perfil da conta">
+              <span class="conta-foto-padrao" id="conta-foto-padrao"><i data-lucide="user"></i></span>
+              <div class="conta-textos">
+                <strong id="conta-nome">—</strong>
+                <span class="conta-numero" id="conta-numero"></span>
+                <small class="conta-detalhes" id="conta-detalhes"></small>
+              </div>
+            </div>
+            <p>Envie <code>!menu</code> para o número conectado (de outro celular) e veja o bot responder. As mensagens aparecem na aba <strong>Conversas</strong>.</p>
+          </div>
+        </div>
+
+        <div class="grade-cards">
+          <div class="card">
+            <div class="card-cabecalho"><i data-lucide="plug-zap"></i><h2>Conexão</h2></div>
+            <p class="card-texto" id="texto-conexao">Iniciando o servidor e preparando a sessão...</p>
+            <p class="numero-conectado oculto" id="numero-conectado"></p>
+            <div class="conexao-acoes">
+              <button class="botao-suave oculto" id="botao-desconectar" title="Fechar a conexão com o WhatsApp (a sessão fica salva)">
+                <i data-lucide="power"></i><span>Desconectar</span>
+              </button>
+              <button class="botao-suave oculto" id="botao-reconectar" title="Conectar de novo usando a sessão salva">
+                <i data-lucide="rotate-cw"></i><span>Reconectar</span>
+              </button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-cabecalho"><i data-lucide="inbox"></i><h2>Recebidas</h2></div>
+            <p class="metrica" id="metrica-recebidas">0</p>
+            <p class="card-suporte">mensagens no total</p>
+          </div>
+          <div class="card">
+            <div class="card-cabecalho"><i data-lucide="send"></i><h2>Enviadas</h2></div>
+            <p class="metrica" id="metrica-enviadas">0</p>
+            <p class="card-suporte">mensagens no total</p>
+          </div>
+          <div class="card">
+            <div class="card-cabecalho"><i data-lucide="calendar"></i><h2>Hoje</h2></div>
+            <p class="metrica" id="metrica-hoje">0</p>
+            <p class="card-suporte">mensagens no dia de hoje</p>
+          </div>
+          <div class="card">
+            <div class="card-cabecalho"><i data-lucide="circle-alert"></i><h2>Não lidas</h2></div>
+            <p class="metrica" id="metrica-naolidas">0</p>
+            <p class="card-suporte">aguardando você responder</p>
+          </div>
+          <div class="card">
+            <div class="card-cabecalho"><i data-lucide="messages-square"></i><h2>Conversas</h2></div>
+            <p class="metrica" id="metrica-conversas">0</p>
+            <p class="card-suporte">chats no painel</p>
+          </div>
+          <div class="card">
+            <div class="card-cabecalho"><i data-lucide="users"></i><h2>Grupos</h2></div>
+            <p class="metrica" id="metrica-grupos">0</p>
+            <p class="card-suporte">grupos com conversa</p>
+          </div>
+          <div class="card">
+            <div class="card-cabecalho"><i data-lucide="image"></i><h2>Mídias</h2></div>
+            <p class="metrica" id="metrica-midias">0</p>
+            <p class="card-suporte">fotos, áudios e arquivos</p>
+          </div>
+          <div class="card">
+            <div class="card-cabecalho"><i data-lucide="timer"></i><h2>No ar</h2></div>
+            <p class="metrica" id="metrica-uptime">—</p>
+            <p class="card-suporte">tempo do servidor ligado</p>
+          </div>
+        </div>
+
+        <!-- Gráfico de atividade (mensagens por hora, estilo oauth-hub).
+             Duas séries empilhadas: recebidas (verde) e enviadas (azul). -->
+        <div class="card">
+          <div class="card-cabecalho"><i data-lucide="activity"></i><h2>Atividade</h2></div>
+          <div class="grafico-meta">
+            <span class="grafico-total" id="grafico-total">0</span>
+            <span class="grafico-legenda">mensagens por hora — últimas 24 horas</span>
+            <span class="grafico-series">
+              <span class="serie"><span class="serie-cor serie-recebidas"></span>Recebidas</span>
+              <span class="serie"><span class="serie-cor serie-enviadas"></span>Enviadas</span>
+            </span>
+          </div>
+          <div class="grafico" id="grafico-atividade"></div>
+          <div class="grafico-eixo"><span>-24h</span><span>-18h</span><span>-12h</span><span>-6h</span><span>agora</span></div>
+          <!-- Mini-métricas das últimas 24 horas (preenchidas pelo app.js) -->
+          <div class="grafico-stats">
+            <span class="gstat"><span class="gstat-valor" id="gstat-recebidas">0</span><span class="gstat-rotulo">recebidas 24h</span></span>
+            <span class="gstat"><span class="gstat-valor" id="gstat-enviadas">0</span><span class="gstat-rotulo">enviadas 24h</span></span>
+            <span class="gstat"><span class="gstat-valor" id="gstat-pico">—</span><span class="gstat-rotulo">hora de pico</span></span>
+            <span class="gstat"><span class="gstat-valor" id="gstat-chats">0</span><span class="gstat-rotulo">chats ativos 24h</span></span>
+            <span class="gstat"><span class="gstat-valor" id="gstat-midias">0</span><span class="gstat-rotulo">mídias 24h</span></span>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ── Aba: Conversas ── -->
+      <section class="view oculto" id="view-conversas">
+        <div class="conversas">
+          <aside class="lista-chats">
+            <div class="lista-chats-topo">
+              <i data-lucide="messages-square"></i><span>Chats</span>
+              <button class="botao-limpar" id="botao-limpar" title="Limpar histórico de mensagens">
+                <i data-lucide="trash-2"></i>
+              </button>
+            </div>
+            <div class="busca-chats">
+              <i data-lucide="search"></i>
+              <input id="busca-chats" type="text" placeholder="Buscar conversa" autocomplete="off">
+            </div>
+            <div id="chats"></div>
+            <p class="lista-vazia" id="chats-vazio">Nenhuma conversa ainda. Quando uma mensagem chegar, o chat aparece aqui.</p>
+          </aside>
+
+          <div class="painel-chat">
+            <div class="mensagens" id="mensagens">
+              <p class="mensagens-vazio" id="mensagens-vazio">Selecione um chat ao lado, ou inicie uma conversa preenchendo o número abaixo.</p>
+            </div>
+            <div class="digitando oculto" id="indicador-digitando">
+              <span class="pontinhos"><span></span><span></span><span></span></span>
+              <span>digitando...</span>
+            </div>
+            <!-- Barra de "respondendo a..." (aparece ao clicar em responder numa bolha) -->
+            <div class="respondendo oculto" id="barra-resposta">
+              <i data-lucide="corner-up-left"></i>
+              <div class="respondendo-info">
+                <strong id="resposta-nome"></strong>
+                <span id="resposta-texto"></span>
+              </div>
+              <button type="button" id="cancelar-resposta" title="Cancelar resposta"><i data-lucide="x"></i></button>
+            </div>
+            <form class="compositor" id="form-enviar">
+              <input id="campo-numero" type="text" placeholder="Destino: número com DDI (5511...) ou o chat selecionado" autocomplete="off">
+              <input id="campo-texto" type="text" placeholder="Escreva uma mensagem" autocomplete="off">
+              <button type="button" class="botao-anexo" id="botao-anexo" title="Enviar imagem ou arquivo"><i data-lucide="paperclip"></i></button>
+              <input type="file" id="campo-arquivo" class="oculto" accept="image/*,video/*,audio/*,application/pdf">
+              <button type="submit" title="Enviar mensagem"><i data-lucide="send-horizontal"></i></button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Aba: Comandos do bot ── -->
+      <section class="view oculto" id="view-comandos">
+        <div class="card">
+          <div class="card-cabecalho"><i data-lucide="bot"></i><h2>Comandos disponíveis</h2></div>
+          <p class="card-suporte">Envie qualquer um destes comandos para o número conectado (a partir de outro celular). A lógica de cada um está no arquivo <code>comandos.js</code>.</p>
+          <table class="tabela-comandos">
+            <thead>
+              <tr><th>Comando</th><th>O que faz</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>!ping</code></td><td>Teste de vida: o bot reage à sua mensagem e responde "pong".</td></tr>
+              <tr><td><code>!menu</code></td><td>Lista de comandos, respondida como reply da sua mensagem.</td></tr>
+              <tr><td><code>!botoes</code></td><td>Mensagem interativa com botões de Sim e Não.</td></tr>
+              <tr><td><code>!lista</code></td><td>Cardápio de pizzaria com seções e itens selecionáveis.</td></tr>
+              <tr><td><code>!link</code></td><td>Botão que abre o canal do YouTube.</td></tr>
+              <tr><td><code>!enquete</code></td><td>Enquete de sabores com votação dentro do WhatsApp.</td></tr>
+            </tbody>
+          </table>
+          <p class="aviso">
+            <i data-lucide="triangle-alert"></i>
+            <span>Botões e listas podem não renderizar em todo aparelho ou tipo de conta. É uma limitação do próprio WhatsApp, não do projeto.</span>
+          </p>
+        </div>
+      </section>
+
+      <!-- ── Aba: Configurações ── -->
+      <section class="view oculto" id="view-configuracoes">
+        <div class="card">
+          <div class="card-cabecalho"><i data-lucide="shield-check"></i><h2>Pessoas</h2></div>
+          <p class="card-suporte">Controle quem recebe respostas automáticas dos comandos. As mensagens de todo mundo continuam aparecendo na aba Conversas — o filtro vale só para as respostas do bot. As alterações são salvas na hora.</p>
+
+          <div class="opcoes-modo">
+            <label class="opcao-radio">
+              <input type="radio" name="modo-bot" value="todos">
+              <span class="opcao-textos">
+                <strong>Todos</strong>
+                <small>O bot responde qualquer pessoa que enviar um comando.</small>
+              </span>
+            </label>
+            <label class="opcao-radio">
+              <input type="radio" name="modo-bot" value="somente_autorizados">
+              <span class="opcao-textos">
+                <strong>Somente autorizados</strong>
+                <small>O bot responde apenas os números da lista abaixo.</small>
+              </span>
+            </label>
+          </div>
+
+          <div class="bloco-autorizados" id="bloco-autorizados">
+            <h3>Números autorizados</h3>
+            <form class="linha-adicionar" id="form-autorizado">
+              <input id="campo-autorizado" type="text" inputmode="numeric" placeholder="Número com DDI (ex: 5511999999999)" autocomplete="off">
+              <button type="submit"><i data-lucide="plus"></i><span>Adicionar</span></button>
+            </form>
+            <ul class="autorizados" id="autorizados"></ul>
+            <p class="lista-vazia oculto" id="autorizados-vazio">Nenhum número autorizado ainda. Adicione o primeiro acima.</p>
+          </div>
+
+        </div>
+
+        <div class="card">
+          <div class="card-cabecalho"><i data-lucide="users"></i><h2>Grupos</h2></div>
+          <p class="card-suporte">Escolha em quais grupos o bot pode responder comandos. Dentro do grupo, o filtro de pessoas acima também continua valendo.</p>
+
+          <div class="opcoes-modo">
+            <label class="opcao-radio">
+              <input type="radio" name="grupos-bot" value="todos">
+              <span class="opcao-textos">
+                <strong>Todos os grupos</strong>
+                <small>O bot responde comandos em qualquer grupo em que estiver.</small>
+              </span>
+            </label>
+            <label class="opcao-radio">
+              <input type="radio" name="grupos-bot" value="nenhum">
+              <span class="opcao-textos">
+                <strong>Nenhum grupo</strong>
+                <small>O bot fica mudo em grupos — só responde no privado.</small>
+              </span>
+            </label>
+            <label class="opcao-radio">
+              <input type="radio" name="grupos-bot" value="autorizados">
+              <span class="opcao-textos">
+                <strong>Somente grupos autorizados</strong>
+                <small>O bot responde apenas nos grupos marcados na lista abaixo.</small>
+              </span>
+            </label>
+          </div>
+
+          <div class="bloco-autorizados" id="bloco-grupos">
+            <div class="grupos-topo">
+              <h3>Grupos da conta</h3>
+              <button type="button" class="botao-suave" id="botao-atualizar-grupos" title="Buscar os grupos de novo">
+                <i data-lucide="refresh-cw"></i><span>Atualizar lista</span>
+              </button>
+            </div>
+            <div class="busca-grupos">
+              <i data-lucide="search"></i>
+              <input id="busca-grupos" type="text" placeholder="Buscar grupo" autocomplete="off">
+            </div>
+            <ul class="lista-grupos" id="lista-grupos"></ul>
+            <p class="lista-vazia oculto" id="grupos-vazio">Nenhum grupo encontrado ainda. Conecte o WhatsApp e clique em "Atualizar lista".</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-cabecalho"><i data-lucide="webhook"></i><h2>Webhook de saída</h2></div>
+          <p class="card-suporte">Toda mensagem (e mudança de status) vira um <code>POST</code> JSON na URL abaixo — é o gancho para integrar com n8n, Make ou o seu sistema. Deixe vazio para desligar.</p>
+          <form class="linha-adicionar" id="form-webhook">
+            <input id="campo-webhook" type="url" placeholder="https://seu-servidor.com/webhook" autocomplete="off">
+            <button type="submit"><i data-lucide="save"></i><span>Salvar</span></button>
+            <button type="button" class="botao-suave" id="botao-testar-webhook"><i data-lucide="send"></i><span>Testar</span></button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-cabecalho"><i data-lucide="id-card"></i><h2>Perfil do bot</h2></div>
+          <p class="card-suporte">Mude o nome, o recado e a foto do número conectado — transforme o chip de teste na marca do seu bot.</p>
+          <form class="linha-adicionar" id="form-perfil">
+            <input id="campo-perfil-nome" type="text" maxlength="25" placeholder="Nome de exibição (até 25 caracteres)" autocomplete="off">
+            <input id="campo-perfil-recado" type="text" maxlength="139" placeholder="Recado (o texto do 'sobre')" autocomplete="off">
+            <button type="submit"><i data-lucide="save"></i><span>Salvar</span></button>
+          </form>
+          <div class="linha-foto-perfil">
+            <button type="button" class="botao-suave" id="botao-foto-perfil"><i data-lucide="image-plus"></i><span>Trocar foto de perfil</span></button>
+            <input type="file" id="campo-foto-perfil" class="oculto" accept="image/*">
+            <span class="card-suporte">A imagem é convertida para o formato do WhatsApp (quadrada, JPEG) automaticamente.</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-cabecalho"><i data-lucide="bell"></i><h2>Notificações</h2></div>
+          <p class="card-suporte">Avisos quando chega mensagem com o painel em segundo plano. Chats silenciados não notificam.</p>
+          <label class="opcao-switch">
+            <input type="checkbox" id="switch-notif-desktop">
+            <span>Notificações na área de trabalho</span>
+          </label>
+          <label class="opcao-switch">
+            <input type="checkbox" id="switch-notif-som">
+            <span>Som ao receber mensagem</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- ── Aba: Docs & IA ── -->
+      <section class="view oculto" id="view-docs">
+        <div class="card">
+          <div class="card-cabecalho"><i data-lucide="sparkles"></i><h2>Documentação com IA (MCP)</h2></div>
+          <p class="card-suporte">Este projeto já vem com um servidor MCP configurado: o arquivo <code>.mcp.json</code> na raiz aponta para <code>https://zapo.to/mcp</code>, a documentação oficial da zapo-js. Com ele, o seu assistente de código consulta a doc de verdade antes de gerar código — em vez de inventar API que não existe.</p>
+
+          <div class="passos-docs">
+            <div class="passo-doc">
+              <h3><i data-lucide="terminal"></i>Claude Code</h3>
+              <p>Abra a pasta do projeto e aprove o servidor <code>zapo-docs</code> quando ele perguntar. Para ter em qualquer projeto:</p>
+              <pre>claude mcp add zapo-docs --scope user --transport http https://zapo.to/mcp</pre>
+            </div>
+            <div class="passo-doc">
+              <h3><i data-lucide="mouse-pointer-click"></i>Cursor</h3>
+              <p>Adicione ao arquivo <code>~/.cursor/mcp.json</code>:</p>
+              <pre>{
+  "mcpServers": {
+    "zapo-docs": { "url": "https://zapo.to/mcp" }
+  }
+}</pre>
+            </div>
+          </div>
+
+          <p class="dica">
+            <i data-lucide="lightbulb"></i>
+            <span>Teste na prática: peça <em>"crie um comando !figurinha no comandos.js consultando a documentação do zapo"</em> e veja a IA buscar a página certa da doc sozinha.</span>
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-cabecalho"><i data-lucide="play"></i><h2>Como rodar o projeto</h2></div>
+          <table class="tabela-comandos">
+            <thead>
+              <tr><th>Comando</th><th>Quando usar</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>npm start</code></td><td>Uso normal: sobe o painel em <code>http://localhost:3333</code>.</td></tr>
+              <tr><td><code>npm run dev</code></td><td>Para mexer no código: reinicia sozinho a cada arquivo salvo.</td></tr>
+              <tr><td><code>docker compose up -d</code></td><td>Para deixar rodando em segundo plano com Docker, sem instalar Node.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-cabecalho"><i data-lucide="link"></i><h2>Links</h2></div>
+          <ul class="lista-links">
+            <li><a href="https://zapo.to" target="_blank" rel="noopener"><i data-lucide="book-open"></i>Documentação da zapo-js<small>zapo.to</small></a></li>
+            <li><a href="https://github.com/vinikjkkj/zapo" target="_blank" rel="noopener"><i data-lucide="code"></i>Código da biblioteca (MIT)<small>github.com/vinikjkkj/zapo</small></a></li>
+            <li><a href="https://www.youtube.com/channel/UCrPbAoQKz42Gm0mLdWatAEA" target="_blank" rel="noopener"><i data-lucide="video"></i>Canal no YouTube<small>vídeo deste projeto</small></a></li>
+            <li><a href="slides.html" target="_blank" rel="noopener"><i data-lucide="presentation"></i>Slides da apresentação<small>usados na live</small></a></li>
+          </ul>
+        </div>
+      </section>
+
+      <footer class="rodape-app">
+        <span>zapo-panel — projeto educacional do vídeo</span>
+        <span class="rodape-sep">&middot;</span>
+        <a href="https://zpro.zdg.com.br/" target="_blank" rel="noopener">
+          <img src="assets/zpro-logo.png" alt="Z-PRO">
+          <span>Z-PRO — Plataforma de Multiatendimento</span>
+        </a>
+        <span class="rodape-sep">&middot;</span>
+        <a href="https://zapo.to" target="_blank" rel="noopener"><span>feito com zapo-js (MIT)</span></a>
+      </footer>
+    </main>
+  </div>
+
+  <!-- Seletor de reação rápida (abre no botão de reagir da bolha) -->
+  <div class="menu-reacoes oculto" id="menu-reacoes">
+    <button type="button" data-emoji="👍">👍</button>
+    <button type="button" data-emoji="❤️">❤️</button>
+    <button type="button" data-emoji="😂">😂</button>
+    <button type="button" data-emoji="😮">😮</button>
+    <button type="button" data-emoji="😢">😢</button>
+    <button type="button" data-emoji="🙏">🙏</button>
+    <button type="button" data-emoji="" class="remover-reacao" title="Remover a minha reação"><i data-lucide="x"></i></button>
+  </div>
+
+  <!-- Menu de contexto da lista de chats (clique com o botão direito) -->
+  <div class="menu-contexto oculto" id="menu-contexto">
+    <button type="button" data-acao="fixar"><i data-lucide="pin"></i><span id="rotulo-fixar">Fixar</span></button>
+    <button type="button" data-acao="silenciar"><i data-lucide="bell-off"></i><span id="rotulo-silenciar">Silenciar</span></button>
+    <button type="button" data-acao="arquivar"><i data-lucide="archive"></i><span id="rotulo-arquivar">Arquivar</span></button>
+  </div>
+
+  <!-- Aviso de erro flutuante (canto da tela) -->
+  <div class="toast oculto" id="toast">
+    <i data-lucide="circle-alert"></i>
+    <span id="toast-texto"></span>
+  </div>
+
+  <!-- socket.io e lucide são servidos pelo nosso próprio servidor (sem CDN) -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/vendor/lucide.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

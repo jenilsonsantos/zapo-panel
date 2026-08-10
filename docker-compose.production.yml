@@ -1,0 +1,36 @@
+services:
+  zapo-panel:
+    build: .
+    container_name: zapo-panel
+    restart: unless-stopped
+    environment:
+      PORT: "3333"
+      DATA_DIR: /app/data
+    volumes:
+      - zapo-data:/app/data
+    networks:
+      - web
+
+  caddy:
+    image: caddy:2.10-alpine
+    container_name: zapo-caddy
+    restart: unless-stopped
+    depends_on:
+      - zapo-panel
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - web
+
+volumes:
+  zapo-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  web:

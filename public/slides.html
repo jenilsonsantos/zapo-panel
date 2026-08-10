@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zapo-js na prática — slides da live</title>
+<link rel="icon" type="image/png" href="favicon-zapo.png">
+<style>
+  /* ───────────────────────────────────────────────────────────────
+     Identidade visual ZAPO (zapo.to):
+       primary #16A338 · light #2BC54E · dark #12802F
+       background-dark #0a0d0c (preto esverdeado, como no site)
+       Rodapé mantém a marca Z-PRO (oferecimento).
+       Azul #31c5f6 reservado ao contraste "API pronta".
+     ─────────────────────────────────────────────────────────────── */
+  :root{
+    --bg:#0a0d0c;
+    --card:#111713;
+    --card2:#0c110e;
+    --line:#1d2921;
+    --line2:#28382e;
+    --fg:#e9eef7;
+    --mut:#96a0b1;
+    --sig:#2bc54e;
+    --sig-2:rgba(43,197,78,.72);
+    --sig-dim:rgba(43,197,78,.07);
+    --blue:#31c5f6;
+    --blue-dim:rgba(49,197,246,.07);
+    --warn:#e0962f;
+    --no:#f0676b;
+    --r:8px;
+    --rb:6px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--fg);
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;overflow:hidden;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(1000px 560px at 8% -10%, rgba(43,197,78,.09), transparent 62%),
+      radial-gradient(760px 460px at 96% 110%, rgba(49,197,246,.05), transparent 64%);
+  }
+
+  .deck{position:relative;z-index:1;height:100vh;height:100dvh;display:flex;flex-direction:column}
+  .slide{
+    display:none;flex:1;min-height:0;overflow-y:auto;
+    padding:clamp(18px,4vh,48px) clamp(18px,5vw,72px) 84px;
+    animation:in .3s cubic-bezier(.2,.7,.3,1) both;
+  }
+  .slide.on{display:block}
+  @keyframes in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .wrap{max-width:1180px;margin:0 auto}
+
+  h1{font-size:clamp(30px,5.2vw,58px);line-height:1.04;margin:0 0 14px;letter-spacing:-.03em;font-weight:800}
+  h2{font-size:clamp(23px,3.2vw,37px);line-height:1.1;margin:0 0 6px;letter-spacing:-.025em;font-weight:700}
+  .grad{
+    background:linear-gradient(to right,var(--sig),var(--sig-2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .sub{color:var(--mut);font-size:clamp(14px,1.55vw,18px);line-height:1.55;margin:0 0 26px;max-width:76ch}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;font-size:11.5px;font-weight:600;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--sig);margin-bottom:16px;
+    border:1px solid rgba(43,197,78,.22);border-radius:999px;padding:6px 14px;background:var(--sig-dim);
+  }
+  p{line-height:1.6}
+  code,.mono{font-family:"Space Mono","JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace}
+  code{background:#0c110e;border:1px solid var(--line2);border-radius:4px;padding:1px 6px;font-size:.85em;color:#c9f5e6}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:clamp(14px,2vw,22px)}
+  @media (max-width:820px){.cols{grid-template-columns:1fr}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:clamp(16px,2.1vw,26px)}
+  .card.evo{border-color:rgba(49,197,246,.28);background:linear-gradient(180deg,var(--blue-dim),var(--card2))}
+  .card.zapo{border-color:rgba(43,197,78,.28);background:linear-gradient(180deg,var(--sig-dim),var(--card2))}
+
+  .badge{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:clamp(16px,1.95vw,22px);letter-spacing:-.015em}
+  .badge .dot{width:10px;height:10px;border-radius:50%;flex:none}
+  .evo .badge .dot{background:var(--blue);box-shadow:0 0 0 4px rgba(49,197,246,.15)}
+  .zapo .badge .dot{background:var(--sig);box-shadow:0 0 0 4px rgba(43,197,78,.15)}
+  .tag{font-size:12px;color:var(--mut);margin-top:6px;letter-spacing:.01em}
+
+  ul.feat{list-style:none;margin:16px 0 0;padding:0}
+  ul.feat li{display:flex;gap:10px;align-items:flex-start;padding:7px 0;font-size:clamp(13.5px,1.45vw,16px);line-height:1.5;border-top:1px solid rgba(255,255,255,.05)}
+  ul.feat li:first-child{border-top:0}
+  ul.feat svg{flex:none;margin-top:3px}
+  .k{color:var(--mut)}
+  .v{font-weight:600}
+
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--card2)}
+  table{border-collapse:collapse;width:100%;min-width:640px;font-size:clamp(13px,1.4vw,15.5px)}
+  th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.45}
+  thead th{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--mut);font-weight:600;background:#0e140f}
+  tbody tr:last-child td{border-bottom:0}
+  td:first-child{color:var(--mut);white-space:nowrap;font-weight:600}
+  tbody tr:hover td{background:rgba(255,255,255,.02)}
+
+  pre{
+    margin:14px 0 0;background:#060905;border:1px solid var(--line2);border-radius:var(--r);
+    padding:14px 16px;overflow-x:auto;font-size:clamp(11.5px,1.12vw,13px);line-height:1.7;
+    font-family:"Space Mono","JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+  }
+  .c-com{color:#5c6675}
+  .c-key{color:var(--warn)}
+  .c-str{color:#8bd5b4}
+  .c-sig{color:var(--sig)}
+
+  .note{
+    margin-top:20px;border-left:2px solid var(--sig);background:var(--sig-dim);
+    border-radius:0 var(--r) var(--r) 0;padding:13px 18px;font-size:clamp(13px,1.4vw,15.5px);line-height:1.6;color:#c9ede0;
+  }
+  .note b{color:#fff}
+  .note.warn{border-left-color:var(--warn);background:rgba(224,150,47,.07);color:#efdcbd}
+
+  .pill{display:inline-block;font-size:11.5px;font-weight:600;padding:4px 11px;border-radius:999px;border:1px solid var(--line2);color:var(--mut)}
+  .pill.on{color:var(--sig);border-color:rgba(43,197,78,.35);background:var(--sig-dim)}
+  .pill.off{color:#f7a5a7;border-color:rgba(240,103,107,.32);background:rgba(240,103,107,.08)}
+
+  .big{font-size:clamp(29px,4.5vw,46px);font-weight:800;letter-spacing:-.035em;line-height:1.04}
+  .big.evo{color:var(--blue)}
+
+  ol.steps{list-style:none;counter-reset:s;margin:0;padding:0;display:grid;gap:9px}
+  ol.steps li{
+    counter-increment:s;position:relative;padding:11px 16px 11px 52px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+    font-size:clamp(13px,1.38vw,15px);line-height:1.5;
+  }
+  ol.steps li::before{
+    content:counter(s);position:absolute;left:14px;top:11px;
+    width:24px;height:24px;border-radius:var(--rb);display:grid;place-items:center;
+    background:var(--sig);color:#07130e;font-weight:700;font-size:12.5px;
+    font-family:Inter,system-ui,sans-serif;
+  }
+  ol.steps li b{color:#fff}
+  ol.steps pre{margin-top:7px;padding:10px 13px;line-height:1.55;font-size:clamp(10.5px,1vw,12px)}
+  ol.steps .alt{display:block;margin-top:7px;color:var(--mut);font-size:.9em;line-height:1.5}
+
+  .nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;align-items:center;gap:16px;
+    padding:12px clamp(18px,5vw,72px);backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,transparent,rgba(10,13,12,.94) 42%);border-top:1px solid var(--line);
+  }
+  .nav .zpro{display:flex;align-items:center;flex:none}
+  .nav .zpro img{height:18px;opacity:.85}
+  .nav .zpro:hover img{opacity:1}
+  .dots{display:flex;gap:6px;flex:1;flex-wrap:wrap}
+  .dots button{
+    width:24px;height:4px;border-radius:99px;border:0;background:#243029;cursor:pointer;padding:0;
+    transition:background .18s,width .18s;
+  }
+  .dots button:hover{background:#37463d}
+  .dots button.on{background:var(--sig);width:36px}
+  .count{font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums;letter-spacing:.06em;font-family:"Space Mono","JetBrains Mono",monospace}
+  .arrows{display:flex;gap:8px}
+  .arrows button{
+    width:36px;height:31px;border-radius:var(--rb);border:1px solid var(--line2);background:#0e140f;
+    color:var(--fg);cursor:pointer;font-size:15px;line-height:1;display:grid;place-items:center;
+  }
+  .arrows button:hover{background:#15201a;border-color:rgba(43,197,78,.3)}
+  .arrows button:disabled{opacity:.3;cursor:default}
+  .arrows button:disabled:hover{background:#0e140f;border-color:var(--line2)}
+  .hint{font-size:12px;color:var(--mut)}
+  @media (max-width:760px){.hint{display:none}}
+
+  .cover-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(14px,2vw,22px);margin-top:clamp(20px,3.2vh,38px)}
+  @media (max-width:820px){.cover-grid{grid-template-columns:1fr}}
+  .cover-logo{height:46px;display:block;margin-bottom:22px}
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+  <!-- 1 - capa -->
+  <section class="slide on">
+    <div class="wrap">
+      <a href="https://zapo.to" target="_blank" rel="noopener"><img class="cover-logo" src="assets/zapo-header.png" alt="zapo"></a>
+      <span class="eyebrow">Live &middot; zapo-js na prática &middot; agosto 2026</span>
+      <h1>WhatsApp <span class="grad">direto do seu código</span></h1>
+      <p class="sub">Hoje o papo é controle total: a <b>zapo-js</b>, uma biblioteca TypeScript
+      que implementa o protocolo do WhatsApp Web <b>dentro do seu próprio app</b> &mdash; sem servidor
+      intermediário. E, para provar, vamos construir do zero o <b>zapo-panel</b>:
+      painel + bot, pronto para você baixar e rodar.</p>
+
+      <div class="cover-grid">
+        <div class="card zapo">
+          <div class="badge"><span class="dot"></span>zapo-js, a biblioteca</div>
+          <div class="tag">TypeScript &middot; Node 20.9+ &middot; MIT &middot; github.com/vinikjkkj/zapo</div>
+          <ul class="feat">
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2bc54e" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg><span>Protocolo WhatsApp Web completo: QR, Signal (e2e), mídia, grupos</span></li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2bc54e" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Multi-sessão</b> no mesmo processo, com stores plugáveis</span></li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2bc54e" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg><span>Docs com servidor <b>MCP</b> para usar com IA (zapo.to)</span></li>
+          </ul>
+        </div>
+        <div class="card zapo">
+          <div class="badge"><span class="dot"></span>zapo-panel, o projeto de hoje</div>
+          <div class="tag">JavaScript puro &middot; zero build &middot; comentado em português</div>
+          <ul class="feat">
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2bc54e" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg><span>Painel web: QR na tela, conversas ao vivo, filtros do bot</span></li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2bc54e" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg><span>Bot de comandos: botões, lista, enquete, reação, "digitando..."</span></li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2bc54e" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg><span>Roda com <code>npm start</code> ou <code>docker compose up -d</code></span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 - lib, nao api -->
+  <section class="slide">
+    <div class="wrap">
+      <span class="eyebrow">O conceito em uma frase</span>
+      <div class="cols">
+        <div class="card evo">
+          <div class="badge"><span class="dot"></span>API pronta (REST)</div>
+          <p class="big evo" style="margin:18px 0 10px">Um servidor entre<br>você e o WhatsApp</p>
+          <p style="color:var(--mut);font-size:clamp(14px,1.5vw,17px);margin:0">
+            Você sobe um serviço, cria instâncias e conversa com ele por endpoints
+            e webhooks. A lógica do WhatsApp mora <i>fora</i> do seu código.
+          </p>
+        </div>
+        <div class="card zapo">
+          <div class="badge"><span class="dot"></span>zapo-js</div>
+          <p class="big grad" style="margin:18px 0 10px">Uma biblioteca<br>dentro do seu app</p>
+          <p style="color:var(--mut);font-size:clamp(14px,1.5vw,17px);margin:0">
+            <code>npm install zapo-js</code> e pronto: eventos e envios acontecem no seu
+            próprio processo Node. Sem serviço intermediário, sem instância, sem webhook
+            &mdash; só JavaScript.
+          </p>
+        </div>
+      </div>
+      <div class="note">
+        <b>Os dois modelos se completam.</b> APIs prontas embalam uma biblioteca num servidor
+        para você só consumir. A zapo-js é a camada de baixo: perfeita quando você quer
+        <b>controle total</b> &mdash; e é o seu sistema que manda.
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 - stack -->
+  <section class="slide">
+    <div class="wrap">
+      <span class="eyebrow">Stack técnica</span>
+      <h2>O que a <span class="grad">zapo-js</span> entrega</h2>
+      <p class="sub">Reimplementação independente do protocolo, com foco em desempenho e multi-sessão.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th></th><th>zapo-js</th></tr></thead>
+          <tbody>
+            <tr><td>Linguagem</td><td>TypeScript &middot; Node 20.9+ (funciona em JS puro)</td></tr>
+            <tr><td>Protocolo</td><td>WhatsApp Web: Noise + Signal (criptografia de ponta a ponta)</td></tr>
+            <tr><td>Pareamento</td><td>QR code ou código de 8 dígitos</td></tr>
+            <tr><td>Sessões</td><td>Várias contas no mesmo processo (<code>sessionId</code>)</td></tr>
+            <tr><td>Persistência</td><td>SQLite, Redis, MongoDB, MySQL ou PostgreSQL</td></tr>
+            <tr><td>Mensagens</td><td>Texto, mídia, reação, enquete, <b>botões e listas</b> (proto bruto)</td></tr>
+            <tr><td>Extras</td><td>Grupos, newsletters, presença, VoIP via plugin, aceleração em Rust</td></tr>
+            <tr><td>Licença</td><td>MIT &mdash; docs em <code>zapo.to</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 - o projeto -->
+  <section class="slide">
+    <div class="wrap">
+      <span class="eyebrow">O projeto</span>
+      <h2>zapo-panel: <span class="grad">6 arquivos</span>, zero build</h2>
+      <p class="sub">Feito para iniciante: JavaScript puro, comentários em português, cada arquivo com uma responsabilidade só.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Arquivo</th><th>O que faz</th></tr></thead>
+          <tbody>
+            <tr><td><code>server.js</code></td><td>Express + Socket.IO: entrega o painel e conversa com o navegador em tempo real</td></tr>
+            <tr><td><code>whatsapp.js</code></td><td>Conexão zapo-js: QR, pareamento, reconexão, repasse de mensagens</td></tr>
+            <tr><td><code>comandos.js</code></td><td>O cérebro do bot: roteia <code>!ping</code>, <code>!menu</code>, cliques de botão e lista</td></tr>
+            <tr><td><code>mensagens.js</code></td><td>Funções prontas de envio: texto, reply, botões, lista, enquete, reação</td></tr>
+            <tr><td><code>configuracao.js</code></td><td>Filtros de quem o bot responde (pessoas e grupos), salvos em JSON</td></tr>
+            <tr><td><code>public/</code></td><td>O painel: HTML, CSS e JS puros &mdash; sem framework, sem build</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note">
+        Quer mudar o bot? <b>Só mexer no <code>comandos.js</code></b> &mdash; e com <code>npm run dev</code>
+        o servidor reinicia sozinho a cada arquivo salvo.
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 - comandos -->
+  <section class="slide">
+    <div class="wrap">
+      <span class="eyebrow">Demo ao vivo</span>
+      <h2>O que o bot responde</h2>
+      <p class="sub">Cada comando demonstra um recurso diferente da lib &mdash; do texto simples ao proto bruto.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Comando</th><th>Recurso demonstrado</th></tr></thead>
+          <tbody>
+            <tr><td><code>!ping</code></td><td>Receber e enviar mensagem + <b>reação</b> na mensagem original</td></tr>
+            <tr><td><code>!menu</code></td><td><b>Reply</b> (resposta citando a mensagem)</td></tr>
+            <tr><td><code>!botoes</code></td><td><b>Botões clássicos</b> Sim/Não via <code>buttonsMessage</code></td></tr>
+            <tr><td><code>!lista</code></td><td><b>Menu de lista</b> (pizzaria com seções) via <code>listMessage</code></td></tr>
+            <tr><td><code>!link</code></td><td><b>Botão de URL</b> moderno via <code>interactiveMessage</code> (nativeFlow)</td></tr>
+            <tr><td><code>!enquete</code></td><td><b>Enquete</b> com votação dentro do WhatsApp</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note warn">
+        <b>Transparência:</b> botões e listas dependem do aparelho e do tipo de conta &mdash; o WhatsApp
+        não renderiza em todo cliente. Vamos testar ao vivo e mostrar o resultado real, sem cortes.
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 - painel -->
+  <section class="slide">
+    <div class="wrap">
+      <span class="eyebrow">O painel</span>
+      <h2>Uma "mini plataforma" no navegador</h2>
+      <p class="sub">Tudo que a lib emite vira interface: sidebar corporativa, ícones Lucide, Socket.IO por baixo.</p>
+      <div class="cols">
+        <div class="card zapo">
+          <div class="badge"><span class="dot"></span>Operação</div>
+          <ul class="feat">
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2bc54e" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>QR code na tela</b> e status ao vivo (aguardando / conectado / caiu)</span></li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2bc54e" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Conversas em tempo real</b>: chats agrupados, bolhas, envio manual</span></li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2bc54e" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg><span>Métricas da sessão: recebidas e enviadas</span></li>
+          </ul>
+        </div>
+        <div class="card zapo">
+          <div class="badge"><span class="dot"></span>Controle do bot</div>
+          <ul class="feat">
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2bc54e" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Pessoas:</b> responder todos ou só números autorizados</span></li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2bc54e" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Grupos:</b> todos, nenhum, ou marcar grupos específicos pelo nome</span></li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2bc54e" stroke-width="2.2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg><span>Tudo salvo em <code>bot-config.json</code> &mdash; sobrevive a restart</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="note">
+        O filtro vale para as <b>respostas do bot</b>: as mensagens de todo mundo continuam
+        aparecendo no painel normalmente.
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 - MCP -->
+  <section class="slide">
+    <div class="wrap">
+      <span class="eyebrow">Docs com IA</span>
+      <h2>A doc do zapo <span class="grad">dentro do seu assistente</span> (MCP)</h2>
+      <p class="sub">O repositório já traz um <code>.mcp.json</code> apontando para o servidor MCP oficial da documentação.
+      O assistente passa a <b>consultar a doc real</b> antes de gerar código &mdash; em vez de inventar API.</p>
+      <div class="cols">
+        <div class="card zapo">
+          <div class="badge"><span class="dot"></span>Claude Code</div>
+<pre><span class="c-com"># já vem no projeto (.mcp.json) — para ter global:</span>
+claude mcp add zapo-docs <span class="c-key">--scope</span> user \
+  <span class="c-key">--transport</span> http <span class="c-str">https://zapo.to/mcp</span></pre>
+        </div>
+        <div class="card zapo">
+          <div class="badge"><span class="dot"></span>Cursor</div>
+<pre><span class="c-com"># ~/.cursor/mcp.json</span>
+{
+  <span class="c-str">"mcpServers"</span>: {
+    <span class="c-str">"zapo-docs"</span>: { <span class="c-str">"url"</span>: <span class="c-str">"https://zapo.to/mcp"</span> }
+  }
+}</pre>
+        </div>
+      </div>
+      <div class="note">
+        <b>Demo na live:</b> vamos pedir <i>"crie um comando !figurinha consultando a doc do zapo"</i>
+        e ver a IA buscar a página certa da documentação sozinha.
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 - como rodar -->
+  <section class="slide">
+    <div class="wrap">
+      <span class="eyebrow">Passo a passo</span>
+      <h2>Rode na sua máquina</h2>
+      <p class="sub" style="margin-bottom:16px">Dois caminhos: Node direto (recomendado para mexer no código) ou Docker (para deixar rodando).</p>
+      <ol class="steps">
+        <li><b>Baixe o projeto</b> &mdash; <code>git clone</code> ou o botão <i>Code &rsaquo; Download ZIP</i> no repositório (link na descrição).</li>
+        <li><b>Com Node 20.9+</b> instalado, dentro da pasta:
+<pre>npm install
+npm start        <span class="c-com"># ou: npm run dev (reinicia sozinho ao salvar)</span></pre>
+        <span class="alt"><b>Prefere Docker?</b> Pula o Node: <span class="mono">docker compose up -d</span> &mdash; a sessão fica num volume, o config fica na pasta.</span></li>
+        <li><b>Abra o painel</b> em <code>http://localhost:3333</code>.</li>
+        <li><b>Escaneie o QR</b> com o WhatsApp: Configurações &rsaquo; Aparelhos conectados &rsaquo; Conectar aparelho.</li>
+        <li><b>Mande <code>!menu</code></b> para o número conectado (de outro celular) e brinque com os comandos.</li>
+      </ol>
+      <div class="note warn" style="margin-top:14px">
+        <b>Use um chip de teste.</b> Biblioteca não-oficial = risco de banimento. Nada de número principal,
+        nada de spam. Projeto educacional.
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 - resumo -->
+  <section class="slide">
+    <div class="wrap">
+      <span class="eyebrow">Resumo</span>
+      <h2>Para levar da live</h2>
+      <div class="tablewrap" style="margin-top:20px">
+        <table>
+          <thead><tr><th></th><th>Em uma linha</th></tr></thead>
+          <tbody>
+            <tr><td>zapo-js</td><td>Lib TypeScript do protocolo WhatsApp Web &mdash; o WhatsApp <b>dentro do seu código</b>, MIT</td></tr>
+            <tr><td>vs APIs prontas</td><td>Plataformas REST são outra camada: embalam a lib num servidor; aqui o controle é todo seu</td></tr>
+            <tr><td>zapo-panel</td><td>Painel + bot em 6 arquivos, zero build, comentado em português &mdash; no repositório</td></tr>
+            <tr><td>Filtros</td><td>Quem o bot responde (pessoas e grupos) configurável pelo painel</td></tr>
+            <tr><td>Docs + IA</td><td>MCP em <code>zapo.to/mcp</code> já configurado no projeto</td></tr>
+            <tr><td>Desafio</td><td>Multi-sessão: dois números no mesmo painel &mdash; mostra nos comentários</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="sub" style="margin-top:26px">
+        Repositório do projeto e links na descrição do vídeo. Se este conteúdo te ajudou,
+        <b>inscreve no canal</b> &mdash; é o que faz a próxima live existir.
+      </p>
+      <p style="color:var(--mut);font-size:13px;line-height:1.7;margin:22px 0 0;border-top:1px solid var(--line);padding-top:16px">
+        Fontes: <span class="mono">github.com/vinikjkkj/zapo</span> (v1.7, agosto/2026) e <span class="mono">zapo.to</span>.
+        Oferecido por <span class="mono">Z-PRO — zpro.zdg.com.br</span>.
+      </p>
+    </div>
+  </section>
+
+</div>
+
+<nav class="nav">
+  <a class="zpro" href="https://zpro.zdg.com.br/" target="_blank" rel="noopener" aria-label="Z-PRO"><img src="assets/zpro-logo-dark.png" alt="Z-PRO"></a>
+  <div class="dots" id="dots"></div>
+  <span class="hint">setas &larr; &rarr; para navegar</span>
+  <span class="count" id="count"></span>
+  <div class="arrows">
+    <button id="prev" aria-label="Slide anterior">&#8249;</button>
+    <button id="next" aria-label="Próximo slide">&#8250;</button>
+  </div>
+</nav>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var dots = document.getElementById('dots');
+  var count = document.getElementById('count');
+  var prev = document.getElementById('prev');
+  var next = document.getElementById('next');
+  var i = 0;
+
+  slides.forEach(function(_, n){
+    var b = document.createElement('button');
+    b.setAttribute('aria-label', 'Slide ' + (n+1));
+    b.addEventListener('click', function(){ go(n); });
+    dots.appendChild(b);
+  });
+
+  function go(n){
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function(s, k){ s.classList.toggle('on', k === i); });
+    Array.prototype.forEach.call(dots.children, function(d, k){ d.classList.toggle('on', k === i); });
+    count.textContent = String(i+1).padStart(2,'0') + ' / ' + String(slides.length).padStart(2,'0');
+    prev.disabled = i === 0;
+    next.disabled = i === slides.length - 1;
+    slides[i].scrollTop = 0;
+    if (location.hash !== '#' + (i+1)) history.replaceState(null, '', '#' + (i+1));
+  }
+
+  prev.addEventListener('click', function(){ go(i-1); });
+  next.addEventListener('click', function(){ go(i+1); });
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); go(i+1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(i-1); }
+    else if (e.key === 'Home') { e.preventDefault(); go(0); }
+    else if (e.key === 'End') { e.preventDefault(); go(slides.length-1); }
+  });
+
+  var x0 = null;
+  document.addEventListener('touchstart', function(e){ x0 = e.touches[0].clientX; }, {passive:true});
+  document.addEventListener('touchend', function(e){
+    if (x0 === null) return;
+    var dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 60) go(dx < 0 ? i+1 : i-1);
+    x0 = null;
+  }, {passive:true});
+
+  window.addEventListener('hashchange', function(){
+    var n = parseInt((location.hash || '').replace('#',''), 10);
+    if (!isNaN(n) && n - 1 !== i) go(n - 1);
+  });
+
+  var start = parseInt((location.hash || '').replace('#',''), 10);
+  go(isNaN(start) ? 0 : start - 1);
+})();
+</script>
+</body>
+</html>

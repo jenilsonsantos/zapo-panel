@@ -1,0 +1,3 @@
+ublochat.com.br {
+    reverse_proxy zapo-panel:3333
+}

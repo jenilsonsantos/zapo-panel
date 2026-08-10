@@ -1,0 +1,25 @@
+{
+  "name": "zapo-panel",
+  "version": "1.0.0",
+  "description": "Painel simples de WhatsApp feito com zapo-js — projeto do vídeo, feito para iniciantes",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@zapo-js/store-sqlite": "^1.1.0",
+    "better-sqlite3": "^13.0.3",
+    "express": "^5.2.1",
+    "lucide": "^1.29.0",
+    "qrcode": "^1.5.4",
+    "sharp": "^0.35.3",
+    "socket.io": "^4.8.3",
+    "zapo-js": "^1.7.0"
+  }
+}

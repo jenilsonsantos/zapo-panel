@@ -1,0 +1,36 @@
+# ─── Dependências ────────────────────────────────────────────
+node_modules/
+
+# ─── DADOS CRÍTICOS — NUNCA COMMITAR ─────────────────────────
+# Sessão/credenciais do WhatsApp (quem tiver isso entra na sua conta!)
+.auth/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.db
+
+# Segredos e variáveis de ambiente
+.env
+.env.*
+*.pem
+*.key
+
+# ─── Dados de uso (conversas, mídias, contadores) ────────────
+historico.json
+contadores.json
+bot-config.json
+midia/
+data/
+
+# ─── Logs ────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ─── Configuração local de ferramentas ───────────────────────
+.claude/settings.local.json
+
+# ─── Lixo de sistema operacional ─────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
