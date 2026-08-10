@@ -130,7 +130,8 @@ export async function socketUser(socket, next) {
     const user = await findSession(raw)
     if (!user) return next(new Error('Não autenticado'))
     if (user.role === 'super_admin') return next(new Error('Administrador não acessa o painel operacional'))
-    socket.data.user = user
-    next()
+    // O cliente WhatsApp legado é singleton. Nunca o exponha para tenants até
+    // o gerenciador de clientes isolados por tenant estar ativo.
+    return next(new Error('A conexão WhatsApp da empresa ainda não foi provisionada'))
   } catch { next(new Error('Não autenticado')) }
 }

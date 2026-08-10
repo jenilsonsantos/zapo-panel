@@ -137,13 +137,19 @@ app.patch('/api/admin/tenants/:id/status', requireUser, requireSuperAdmin, async
 
 app.get('/', (req, res) => {
   if (!req.user) return res.redirect('/login')
-  return res.redirect(req.user.role === 'super_admin' ? '/admin' : '/index.html')
+  return res.redirect(req.user.role === 'super_admin' ? '/admin' : '/tenant/aguardando')
 })
 app.get('/index.html', (req, res) => {
   if (!req.user) return res.redirect('/login')
   if (req.user.role === 'super_admin') return res.redirect('/admin')
-  res.sendFile(join(process.cwd(), 'public', 'index.html'))
+  return res.redirect('/tenant/aguardando')
 })
+app.get('/tenant/aguardando', (req, res) => {
+  if (!req.user) return res.redirect('/login')
+  if (req.user.role === 'super_admin') return res.redirect('/admin')
+  res.sendFile(join(process.cwd(), 'public', 'tenant-pending.html'))
+})
+app.get('/tenant-pending.html', (req, res) => res.redirect('/tenant/aguardando'))
 app.get('/login', (req, res) => {
   if (req.user) return res.redirect(req.user.role === 'super_admin' ? '/admin' : '/')
   res.sendFile(join(process.cwd(), 'public', 'login.html'))
