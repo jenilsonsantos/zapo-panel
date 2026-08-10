@@ -91,6 +91,33 @@ export async function register(req, res, next) {
   } finally { connection.release() }
 }
 
+// Mudanças de credenciais exigem a senha atual para proteger uma sessão deixada aberta.
+export async function updateAccount(req, res, next) {
+  const name = String(req.body?.name || '').trim().slice(0, 120)
+  const email = String(req.body?.email || '').trim().toLowerCase()
+  const currentPassword = String(req.body?.currentPassword || '')
+  const newPassword = String(req.body?.newPassword || '')
+  if (!name || !/^\S+@\S+\.\S+$/.test(email) || !currentPassword) {
+    return res.status(400).json({ error: 'Informe nome, e-mail válido e sua senha atual.' })
+  }
+  if (newPassword && newPassword.length < 14) return res.status(400).json({ error: 'A nova senha deve ter pelo menos 14 caracteres.' })
+  try {
+    const [rows] = await db.query('SELECT password_hash FROM users WHERE id = ? LIMIT 1', [req.user.id])
+    if (!rows[0] || !(await bcrypt.compare(currentPassword, rows[0].password_hash))) {
+      return res.status(401).json({ error: 'A senha atual está incorreta.' })
+    }
+    const params = [name, email]
+    let query = 'UPDATE users SET name = ?, email = ?'
+    if (newPassword) { query += ', password_hash = ?'; params.push(await bcrypt.hash(newPassword, 12)) }
+    query += ' WHERE id = ?'; params.push(req.user.id)
+    await db.query(query, params)
+    res.json({ ok: true, user: { name, email, role: req.user.role } })
+  } catch (error) {
+    if (error?.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Este e-mail já está em uso.' })
+    next(error)
+  }
+}
+
 export async function logout(req, res) {
   const raw = cookieValue(req.headers.cookie, COOKIE)
   if (raw) await db.query('DELETE FROM app_sessions WHERE token_hash = ?', [hashToken(raw)])

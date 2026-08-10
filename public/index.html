@@ -32,6 +32,9 @@
         <button class="menu-item" data-view="configuracoes">
           <i data-lucide="settings"></i><span>Configurações</span>
         </button>
+        <button class="menu-item" data-view="minha-conta">
+          <i data-lucide="circle-user-round"></i><span>Minha conta</span>
+        </button>
         <button class="menu-item" data-view="docs">
           <i data-lucide="sparkles"></i><span>Docs &amp; IA</span>
         </button>
@@ -402,6 +405,22 @@
       </section>
 
       <!-- ── Aba: Docs & IA ── -->
+      <section class="view oculto" id="view-minha-conta">
+        <div class="card conta-card">
+          <div class="card-cabecalho"><i data-lucide="user-cog"></i><h2>Minha conta</h2></div>
+          <p class="card-suporte">Altere seus dados de acesso. Para sua segurança, confirme a senha atual.</p>
+          <form id="form-minha-conta" class="form-conta">
+            <label>Nome<input id="conta-nome-usuario" name="name" required maxlength="120" autocomplete="name"></label>
+            <label>E-mail<input id="conta-email-usuario" type="email" name="email" required autocomplete="email"></label>
+            <hr>
+            <label>Senha atual<input type="password" name="currentPassword" required autocomplete="current-password"></label>
+            <label>Nova senha <small>(deixe em branco para não alterar)</small><input type="password" name="newPassword" minlength="14" autocomplete="new-password"></label>
+            <button type="submit"><i data-lucide="save"></i>Salvar alterações</button>
+            <p id="conta-mensagem" class="auth-error" aria-live="polite"></p>
+          </form>
+        </div>
+      </section>
+
       <section class="view oculto" id="view-docs">
         <div class="card">
           <div class="card-cabecalho"><i data-lucide="sparkles"></i><h2>Documentação com IA (MCP)</h2></div>

@@ -14,7 +14,7 @@ import sharp from 'sharp'
 import { iniciarWhatsapp } from './whatsapp.js'
 import { obterConfiguracao, salvarConfiguracao } from './configuracao.js'
 import { db, id, initializeDatabase, bootstrapSuperAdmin } from './database.js'
-import { loadUser, requireUser, requireSuperAdmin, login, adminLogin, logout, register, socketUser } from './auth.js'
+import { loadUser, requireUser, requireSuperAdmin, login, adminLogin, logout, register, updateAccount, socketUser } from './auth.js'
 
 // "Silenciar para sempre": o cliente oficial usa um timestamp no ano 9999
 const MUTE_PARA_SEMPRE = 253402300799000
@@ -51,6 +51,7 @@ const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 8, standardHea
 const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 4, standardHeaders: 'draft-8', legacyHeaders: false })
 app.post('/api/auth/login', loginLimiter, login)
 app.post('/api/auth/register', registerLimiter, register)
+app.put('/api/auth/account', requireUser, loginLimiter, updateAccount)
 app.post('/api/admin/login', loginLimiter, adminLogin)
 app.post('/api/auth/logout', logout)
 app.get('/api/auth/me', (req, res) => {

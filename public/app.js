@@ -5,11 +5,17 @@
 /* eslint-env browser */
 /* global io, lucide */
 
+let usuarioAtual = null
 // A página pode ser carregada por uma URL direta; sem sessão válida voltamos ao login.
 fetch('/api/auth/me').then((resposta) => {
   if (!resposta.ok) location.replace('/login')
   return resposta.ok ? resposta.json() : null
 }).then((dados) => {
+  usuarioAtual = dados?.user || null
+  if (usuarioAtual) {
+    document.querySelector('#conta-nome-usuario').value = usuarioAtual.name
+    document.querySelector('#conta-email-usuario').value = usuarioAtual.email
+  }
   if (dados?.user?.role === 'super_admin') {
     document.querySelector('.topo-acoes')?.insertAdjacentHTML('afterbegin', '<a href="/admin" class="botao-privado" title="Administração">Admin</a>')
   }
@@ -93,6 +99,7 @@ const TITULOS = {
   'conversas': 'Conversas',
   'comandos': 'Comandos do bot',
   'configuracoes': 'Configurações',
+  'minha-conta': 'Minha conta',
   'docs': 'Docs & IA',
 }
 
@@ -112,6 +119,20 @@ document.querySelectorAll('.menu-item').forEach((botao) => {
 
 document.querySelectorAll('.tenant-hero-action[data-view]').forEach((botao) => {
   botao.addEventListener('click', () => document.querySelector(`.menu-item[data-view="${botao.dataset.view}"]`)?.click())
+})
+
+$('#form-minha-conta')?.addEventListener('submit', async (event) => {
+  event.preventDefault()
+  const mensagem = $('#conta-mensagem')
+  mensagem.textContent = ''
+  const resposta = await fetch('/api/auth/account', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.fromEntries(new FormData(event.currentTarget))) })
+  const dados = await resposta.json().catch(() => ({}))
+  if (!resposta.ok) { mensagem.textContent = dados.error || 'Não foi possível salvar as alterações.'; return }
+  usuarioAtual = dados.user
+  event.currentTarget.querySelector('[name="currentPassword"]').value = ''
+  event.currentTarget.querySelector('[name="newPassword"]').value = ''
+  mensagem.style.color = '#12802f'
+  mensagem.textContent = 'Dados atualizados com sucesso.'
 })
 
 // ── Status da conexão (pill no topo + bolinha na sidebar + cards) ─────────
