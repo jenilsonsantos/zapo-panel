@@ -7,10 +7,14 @@ import { readFileSync, writeFileSync, existsSync, rmSync, mkdirSync } from 'node
 import { join } from 'node:path'
 import express from 'express'
 import { Server } from 'socket.io'
+import helmet from 'helmet'
+import { rateLimit } from 'express-rate-limit'
 import QRCode from 'qrcode'
 import sharp from 'sharp'
 import { iniciarWhatsapp } from './whatsapp.js'
 import { obterConfiguracao, salvarConfiguracao } from './configuracao.js'
+import { db, id, initializeDatabase, bootstrapSuperAdmin } from './database.js'
+import { loadUser, requireUser, requireSuperAdmin, login, logout, socketUser } from './auth.js'
 
 // "Silenciar para sempre": o cliente oficial usa um timestamp no ano 9999
 const MUTE_PARA_SEMPRE = 253402300799000
@@ -38,19 +42,78 @@ const DIRETORIO_DADOS = process.env.DATA_DIR || '.'
 mkdirSync(DIRETORIO_DADOS, { recursive: true })
 
 const app = express()
+app.set('trust proxy', 1)
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }))
+app.use(express.json({ limit: '32kb' }))
+app.use(loadUser)
+
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 8, standardHeaders: 'draft-8', legacyHeaders: false })
+app.post('/api/auth/login', loginLimiter, login)
+app.post('/api/auth/logout', logout)
+app.get('/api/auth/me', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Não autenticado.' })
+  res.json({ user: req.user })
+})
+
+app.get('/api/admin/tenants', requireUser, requireSuperAdmin, async (req, res, next) => {
+  try {
+    const [rows] = await db.query(`SELECT t.id, t.name, t.slug, t.status, t.created_at, COUNT(tu.user_id) AS users
+      FROM tenants t LEFT JOIN tenant_users tu ON tu.tenant_id = t.id GROUP BY t.id ORDER BY t.created_at DESC`)
+    res.json({ tenants: rows })
+  } catch (error) { next(error) }
+})
+
+app.post('/api/admin/tenants', requireUser, requireSuperAdmin, async (req, res, next) => {
+  const name = String(req.body?.name || '').trim().slice(0, 120)
+  const slug = String(req.body?.slug || '').trim().toLowerCase()
+  const adminName = String(req.body?.adminName || '').trim().slice(0, 120)
+  const email = String(req.body?.email || '').trim().toLowerCase()
+  const password = String(req.body?.password || '')
+  if (!name || !adminName || !/^[a-z0-9-]{3,80}$/.test(slug) || !/^\S+@\S+\.\S+$/.test(email) || password.length < 14) {
+    return res.status(400).json({ error: 'Informe empresa, slug, administrador, e-mail válido e senha de no mínimo 14 caracteres.' })
+  }
+  const connection = await db.getConnection()
+  try {
+    await connection.beginTransaction()
+    const tenantId = id(); const userId = id()
+    const bcrypt = await import('bcryptjs')
+    await connection.query('INSERT INTO tenants (id, name, slug) VALUES (?, ?, ?)', [tenantId, name, slug])
+    await connection.query('INSERT INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)', [userId, adminName, email, await bcrypt.default.hash(password, 12), 'tenant_admin'])
+    await connection.query('INSERT INTO tenant_users (tenant_id, user_id, role) VALUES (?, ?, ?)', [tenantId, userId, 'owner'])
+    await connection.query('INSERT INTO whatsapp_connections (id, tenant_id, name, session_key) VALUES (?, ?, ?, ?)', [id(), tenantId, 'Conexão principal', `tenant-${tenantId}`])
+    await connection.commit()
+    res.status(201).json({ ok: true, tenant: { id: tenantId, name, slug } })
+  } catch (error) {
+    await connection.rollback()
+    if (error?.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Esse slug ou e-mail já está em uso.' })
+    next(error)
+  } finally { connection.release() }
+})
+
+app.patch('/api/admin/tenants/:id/status', requireUser, requireSuperAdmin, async (req, res, next) => {
+  try {
+    const status = req.body?.status === 'suspended' ? 'suspended' : 'active'
+    await db.query('UPDATE tenants SET status = ? WHERE id = ?', [status, req.params.id])
+    res.json({ ok: true })
+  } catch (error) { next(error) }
+})
+
+app.get('/', (req, res) => res.redirect(req.user ? '/index.html' : '/login.html'))
+app.get('/admin', requireUser, requireSuperAdmin, (req, res) => res.sendFile(join(process.cwd(), 'public', 'admin.html')))
 const servidorHttp = http.createServer(app)
 // maxHttpBufferSize maior para o envio de arquivos pelo painel (padrão é só 1 MB)
 const io = new Server(servidorHttp, { maxHttpBufferSize: 30 * 1024 * 1024 })
+io.use(socketUser)
 
 // A pasta public/ tem o HTML, CSS e JS do painel
-app.use(express.static('public'))
+app.use(express.static('public', { index: false }))
 
 // Ícones Lucide (mesmo conjunto do lucide-react, versão sem build):
 // o navegador carrega o script direto do node_modules via esta rota.
 app.use('/vendor', express.static('node_modules/lucide/dist/umd'))
 
 // Mídias baixadas do WhatsApp (o whatsapp.js salva nesta pasta)
-app.use('/midia', express.static(join(DIRETORIO_DADOS, 'midia')))
+app.use('/midia', requireUser, express.static(join(DIRETORIO_DADOS, 'midia')))
 
 // ── Histórico de mensagens (para os chats não sumirem no F5) ──────────────
 // Guardamos as últimas mensagens num arquivo JSON simples. Ao abrir o painel,
@@ -721,7 +784,10 @@ process.on('unhandledRejection', (motivo) => {
   console.error('Promise rejeitada sem tratamento (o servidor continua rodando):', motivo)
 })
 
-servidorHttp.listen(PORTA, () => {
+async function iniciarServidor() {
+  await initializeDatabase()
+  await bootstrapSuperAdmin()
+  servidorHttp.listen(PORTA, () => {
   console.log('')
   console.log('==============================================')
   console.log('  zapo-panel — painel de WhatsApp no ar!')
@@ -734,4 +800,10 @@ servidorHttp.listen(PORTA, () => {
   console.log('')
 
   ligarWhatsapp()
+  })
+}
+
+iniciarServidor().catch((erro) => {
+  console.error('Falha crítica na inicialização:', erro)
+  process.exit(1)
 })

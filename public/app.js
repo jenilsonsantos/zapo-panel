@@ -5,6 +5,16 @@
 /* eslint-env browser */
 /* global io, lucide */
 
+// A página pode ser carregada por uma URL direta; sem sessão válida voltamos ao login.
+fetch('/api/auth/me').then((resposta) => {
+  if (!resposta.ok) location.replace('/login.html')
+  return resposta.ok ? resposta.json() : null
+}).then((dados) => {
+  if (dados?.user?.role === 'super_admin') {
+    document.querySelector('.topo-acoes')?.insertAdjacentHTML('afterbegin', '<a href="/admin" class="botao-privado" title="Administração">Admin</a>')
+  }
+}).catch(() => location.replace('/login.html'))
+
 // ── Estado do painel (fica só na memória do navegador) ─────────────────────
 // conversas: cada chat vira uma entrada { nome, mensagens: [...] }
 const conversas = new Map()

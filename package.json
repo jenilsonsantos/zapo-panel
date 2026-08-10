@@ -14,9 +14,13 @@
   "license": "MIT",
   "dependencies": {
     "@zapo-js/store-sqlite": "^1.1.0",
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.6.2",
+    "helmet": "^8.3.0",
     "lucide": "^1.29.0",
+    "mysql2": "^3.23.2",
     "qrcode": "^1.5.4",
     "sharp": "^0.35.3",
     "socket.io": "^4.8.3",
